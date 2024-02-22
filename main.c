@@ -91,7 +91,7 @@ void createZombieProcess(void) {
 	} else if (id == CHILD_ID) {
 		// NOTE: Waiting 1 second in Child process so that the parent
 		// process terminates first. The Child process with a dead
-		// parent process is a zombie process
+		// parent process is an orphan process
 		sleep(1);
 		// NOTE: Another process is going to take over as the parent
 		// process
@@ -101,7 +101,8 @@ void createZombieProcess(void) {
 	}
 
 	// NOTE: Good practice to way for child processes to prevent memory
-	// leaks
+	// leaks. A process not acknowledge by the parent process is a zombie
+	// process
 	pid_t res;
 	// NOTE: wait returns the PID of the waited process
 	if ((res = wait(NULL)) == -1) {
