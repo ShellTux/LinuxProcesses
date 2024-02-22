@@ -82,7 +82,7 @@ void parentPID(void) {
 	}
 }
 
-void createZombieProcess(void) {
+void createOrphanProcess(void) {
 	int id = fork();
 
 	if (id == FORK_INVALID_ID) {
@@ -127,7 +127,7 @@ int main(void)
 #elif FUNCTION == 5
 	parentPID();
 #elif FUNCTION == 6
-	createZombieProcess();
+	createOrphanProcess();
 #endif
 
 	return 0;
