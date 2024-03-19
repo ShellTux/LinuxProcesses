@@ -170,7 +170,97 @@ int simpleThreads() {
 	return 0;
 }
 
-#define FUNCTION 7
+int globalRaceConditionVariable = 0;
+
+#define NO_RACE_CONDITION_ITERATIONS 100
+#define RACE_CONDITION_ITERATIONS 1000000
+
+// NOTE: There is also some probability for race condition, but it less likelier
+// when the number of iterations is bigger
+void *noRaceCondition()
+{
+	for (int i = 0; i < NO_RACE_CONDITION_ITERATIONS; ++i) {
+		globalRaceConditionVariable++;
+	}
+	pthread_exit(NULL);
+}
+
+void *raceCondition()
+{
+	for (int i = 0; i < RACE_CONDITION_ITERATIONS; ++i) {
+		globalRaceConditionVariable++;
+	}
+	pthread_exit(NULL);
+}
+
+int raceConditionExample(void)
+{
+	Thread threads[N_THREADS] = {0};
+
+	for (int i = 0; i < N_THREADS; ++i) {
+		threads[i].id = i + 1;
+		if (pthread_create(
+					&threads[i].thread,
+					NULL,
+					noRaceCondition,
+					&threads[i].id
+				  ) != 0) {
+			return 1;
+		}
+	}
+
+	for (int i = 0; i < N_THREADS; ++i) {
+		if (pthread_join(
+					threads[i].thread,
+					NULL
+				) != 0) {
+			return 1;
+		}
+	}
+
+	printf("Global Race Condition Variable:\n");
+	printf(
+			"Iterations %d: %d, Expected: %d\n",
+			NO_RACE_CONDITION_ITERATIONS,
+			globalRaceConditionVariable,
+			globalRaceConditionVariable == (N_THREADS * NO_RACE_CONDITION_ITERATIONS)
+	      );
+
+	globalRaceConditionVariable = 0;
+
+	for (int i = 0; i < N_THREADS; ++i) {
+		threads[i].id = i + 1;
+		if (pthread_create(
+					&threads[i].thread,
+					NULL,
+					raceCondition,
+					&threads[i].id
+				  ) != 0) {
+			return 1;
+		}
+	}
+
+	for (int i = 0; i < N_THREADS; ++i) {
+		if (pthread_join(
+					threads[i].thread,
+					NULL
+				) != 0) {
+			return 1;
+		}
+	}
+
+	printf(
+			"Iterations %d: %d, Expected: %d\n",
+			RACE_CONDITION_ITERATIONS,
+			globalRaceConditionVariable,
+			globalRaceConditionVariable == (N_THREADS * RACE_CONDITION_ITERATIONS)
+	      );
+
+
+	return 0;
+}
+
+#define FUNCTION 8
 
 int main(void)
 {
@@ -188,6 +278,8 @@ int main(void)
 	createOrphanProcess();
 #elif FUNCTION == 7
 	return simpleThreads();
+#elif FUNCTION == 8
+	return raceConditionExample();
 #endif
 
 	return 0;
