@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <pthread.h>
+#include <stdlib.h>
 
 #define CHILD_ID 0
 #define FORK_INVALID_ID -1
@@ -112,7 +114,63 @@ void createOrphanProcess(void) {
 	}
 }
 
-#define FUNCTION 6
+typedef struct {
+	int id;
+	int *result;
+	pthread_t thread;
+} Thread;
+
+#define N_THREADS 10
+#define RANDOM_SLEEP 500
+
+void* threadRoutine(void *threadID) {
+	int id = *(int *) threadID;
+	printf("[%02d] Thread, start working...\n", id);
+	usleep(rand() % RANDOM_SLEEP);
+	printf("[%02d] Thread, end work. Leaving...\n", id);
+	int *result = malloc(sizeof(int));
+	*result = rand() % 20;
+	pthread_exit((void *) result);
+}
+
+int simpleThreads() {
+	srand(time(NULL));
+	Thread threads[N_THREADS] = {0};
+
+	for (int i = 0; i < N_THREADS; ++i) {
+		threads[i].id = i + 1;
+		if (pthread_create(
+					&threads[i].thread,
+					NULL,
+					threadRoutine,
+					&threads[i].id
+				  ) != 0) {
+			return 1;
+		}
+	}
+
+	// NOTE: All threads created, if we don't wait for them the process will
+	// end before the threads finish. So we want to join them
+	for (int i = 0; i < N_THREADS; ++i) {
+		if (pthread_join(
+					threads[i].thread,
+					(void **) &(threads[i].result)
+				) != 0) {
+			return 1;
+		}
+	}
+
+	printf("-------Final List-------\n");
+	for (int i = 0; i < N_THREADS; ++i) {
+		Thread thread = threads[i];
+		printf("Thread %03d returned %03d\n", thread.id, *thread.result);
+		free(thread.result);
+	}
+
+	return 0;
+}
+
+#define FUNCTION 7
 
 int main(void)
 {
@@ -128,6 +186,8 @@ int main(void)
 	parentPID();
 #elif FUNCTION == 6
 	createOrphanProcess();
+#elif FUNCTION == 7
+	return simpleThreads();
 #endif
 
 	return 0;
